@@ -1,14 +1,44 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-volitale int 
-counter0 = 0,
-counter1 = 0,
-counter3 = 0;
-
-
-
-void LEDH (n){
+volatile int 
+	mls = 0,
+	mode_st = 1,
+	counter1 = 0,
+	counter2 = 0,
+	counterB5 = 0,
+	counterB4 = 0,
+	counterB3 = 0,
+	speed = 1,			
+	B1prest = 1,
+	B2prest = 1;
+	
+	
+ISR(TIMER1_COMPA_vect){
+	
+	switch (mode_st){
+		
+		case 1:
+			PORTB |= (1<<(5)) | (1<<(4)) | (1<<(3));
+			counter1++;
+			break;
+			
+		case 2:
+			counter2++;
+			break;
+		
+		case 3:
+			counterB5++;
+			counterB4++;
+			counterB3++;
+			break;
+			
+	}
+}
+	
+ISR(TIMER3_COMPA_vect){ mls++;}
+				
+void LEDH (int n){
 	PORTB |= (1<<(n));
 	}
 	
@@ -16,62 +46,189 @@ void LEDL (int n){
 	PORTB &= ~(1<<(n));
 	}
 
+//mode1
+void mode1(void){
+	
 
-ISR(TIMER0_COMPA_vect){
-			LEDH(5);
-			counter0++;
-			}
-	
-ISR(TIMER1_COMPA_vect){
-			LEDH(4);
-			counter1++;
-			}
-			
-ISR(TIMER1_COMPA_vect){
-			LEDH(3);
-			counter1++;
-			}			
-			
-int main(void){
-	
-	//Timer 0
-	DDRB |= (1<<DDB4);
-	TCCR0A = 0;
-	TCCR0B = 0;
-	TCCR0B |= (1<<WGM02) | (1<<CS01);
-	TCNT0 = 0;
-	TIMSK0 = |(1<<OCIE0B);
-	OCR0A = 19999;
-	//
-	
-	//Timer 1
 	DDRB |= (1<<DDB5);
 	TCCR1A = 0;
 	TCCR1B = 0;
 	TCCR1B |= (1<<WGM12) | (1<<CS12);
 	TCNT1 = 0;
-	TIMSK1 |= (1<<OCIE1B);
-	OCR1A = 31249;
-	//
+	TIMSK1 |= (1<<OCIE1A);
+	OCR1A = ((int)(31250 / speed)) - 1;
 	
-	//Timer3
-	DDRB |= (1<<DDB3);
+	sei();
+			
+		if (counter1 == 2){
+			PORTB &= ~( (1<<(5)) | (1<<(4)) | (1<<(3)) );
+			counter1 = 0;
+		}
+}
+//
+
+// mode2	
+void mode2 (void){
+	
+	DDRB |= (1<<DDB5);
 	TCCR1A = 0;
 	TCCR1B = 0;
-	TCCR1B |= (1<<WGM32) | (1<<CS32);
-	TCNT3 = 0;
-	TIMSK1 |= (1<<OCIE3B);
-	OCR1A = 62499;
-	//
-	sei();
+	TCCR1B |= (1<<WGM12) | (1<<CS12);
+	TCNT1 = 0;
+	TIMSK1 |= (1<<OCIE1A);
+	OCR1A = ((int)(31250 / speed)) - 1;
 	
-	while(1) {
-			
-		if (counter1 & 1){
-			LEDL(5);
-			counter = 0;
+	sei();
+				
+		if (counter2 == 0){
+			LEDL(3);
+			LEDH(5);
 			}
+				
+		if (counter2 == 1){
+			LEDL(5);
+			LEDH(4);
+			}
+		
+		if (counter2 == 2){
+			LEDL(4);
+			LEDH(3);
+			}
+			
+		if (counter2 == 3){
+			counter2 = 0;
+	
 	}
+}
+//
 
+//mode3
+void mode3(void){
+	
+	//Timer 1
+	TCCR1A = 0;
+	TCCR1B = 0;
+	TCCR1B |= (1<<CS10);
+	TCCR1B |= (1<<WGM12);
+	TCNT1 = 0;
+	TIMSK1 |= (1<<OCIE1A);
+	OCR1A = 15999;
+	//
+	
+	sei();
+			
+		if (counterB5 == ((int) 500 / speed) ){
+				LEDH(5);
+				}
+			
+		if (counterB5 == ((int) 1000 / speed) ){
+				LEDL(5);
+				}
+			
+		if (counterB4 == ((int) 1500 / speed) ){
+				LEDH(4);
+				}
+			
+		if (counterB4 == ((int) 3000 / speed) ){
+				LEDL(4);
+				}
+			
+		
+		if (counterB3 == ((int) 2500 / speed) ){
+				LEDH(3);
+				}
+			
+		if (counterB3 == ((int) 5000 / speed) ){
+				LEDL(3);
+				
+	}
+}
+//
+			
+int B2_curst (void){
+	if ( !(PINB & (1<<2) )){
+		return 0;
+		}
+	else {return 1;}	
+	}
+	
+int B1_curst (void){
+	if ( !(PINB & (1<<1) )){
+		return 0;
+		}
+	else {return 1;}	
+	}
+		
+	
+void milis(int n){
+	
+		mls = 0;
+		TCNT3 = 0;
+		TCCR3B |= (1<<CS30);
+		
+		TIMSK3 |= (1<<OCIE3A);
+				
+		while(mls < n){continue;}
+		
+		TCCR3B &= ~(1<<CS30);
+		TIMSK3 &= ~(1<<OCIE3A);
+		
+		}	
+					
+int main(void){
+	
+	DDRB &= ~(1<<DDB1);
+	PORTB |= (1<<PB1);
+	
+	DDRB &= ~(1<<DDB2);
+	PORTB |= (1<<PB2);
+	
+	TCCR3A = 0;
+	TCCR3B = 0;
+	TCCR3B |= (1<<WGM32);
+	OCR3A = 15999;
+	
+	sei();
+	while (1){
+		
+		milis(20);
+			
+		if ( (B1_curst() == 0) & (B1prest == 1) ){
+			B1prest = B1_curst();
+			mode_st++;
+			}
+			
+		milis(20);	
+			
+		if ( (B2_curst() == 0) & (B2prest == 1) ){
+			B2prest = B2_curst();
+			speed++;
+			}
+			
+		if (speed == 4){
+			speed = 1;
+			}
+				
+		
+		switch(mode_st){
+				
+			case 1:
+				mode1();
+				break;
+		
+			case 2:
+				mode2();
+				break;
+			
+			case 3:
+				mode3();
+				break;	
+			
+			case 4:
+				mode_st = 1;
+				break;
+			}
+		}
+		
 	return 0;	
 }
