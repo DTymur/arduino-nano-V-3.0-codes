@@ -20,7 +20,7 @@ void LEDL (void){
 int main(void){
 	
 	unsigned int 
-	st = 0,
+	st = 1,
 	Bprest = 1;
 	
 	DDRB |= (1<<DDB5);
@@ -31,21 +31,21 @@ int main(void){
 	while (1){
 		
 		_delay_ms(50);	
-		if ( (B4_curst() ^ Bprest) == 1){
+		if ( (B4_curst() == 0) & (Bprest == 1) ){
 			Bprest = B4_curst();
 			st++;
 			}
 			
-		if (2 == st || 1 == st){
+		if (st == 1){
 			LEDH();
 			}
 			
-		if (st > 2){
+		if (st == 2){
 			LEDL();
 			}
 			
-		if (st == 4){
-			st = 0;
+		if (st == 3){
+			st = 1;
 			}	
 	}
 	return 0;	
