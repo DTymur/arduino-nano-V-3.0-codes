@@ -35,6 +35,8 @@ int main(void){
 			Bprest = B4_curst();
 			st++;
 			}
+		
+		Bprest = B4_curst();
 			
 		if (st == 1){
 			LEDH();
